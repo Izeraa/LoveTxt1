@@ -26,7 +26,7 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install dependencies
+      - name: Install web dependencies
         run: npm install --legacy-peer-deps
 
       - name: Build web app
@@ -38,11 +38,8 @@ jobs:
           distribution: "temurin"
           java-version: "17"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Capacitor & Assets CLI
-        run: npm install --no-save --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/assets@3
+      - name: Install Capacitor
+        run: npm install --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
 
       - name: Add and sync Android platform
         run: |
@@ -51,43 +48,69 @@ jobs:
           fi
           npx cap sync android
 
-      - name: Generate Android app icon and splash from loveTxt image
+      - name: Apply loveTxt app icon and splash screen
         run: |
-          python3 -c "import PIL" 2>/dev/null || (sudo apt-get update && sudo apt-get install -y python3-pil)
+          python3 -c "import PIL" 2>/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq python3-pil)
           python3 - << 'EOF'
+          import glob
           import os
           from PIL import Image
 
           src_path = "public/assets/aistudio/_cone_Neon_LoveTxt_a4c65811.png"
-          os.makedirs("assets", exist_ok=True)
+          res_dir = "android/app/src/main/res"
 
           img = Image.open(src_path).convert("RGBA")
           w, h = img.size
           side = min(w, h)
           left = (w - side) // 2
           top = (h - side) // 2
-          cropped = img.crop((left, top, left + side, top + side))
+          icon_square = img.crop((left, top, left + side, top + side))
 
-          icon = cropped.resize((1024, 1024), Image.Resampling.LANCZOS)
-          icon.save("assets/icon-only.png")
-          icon.save("assets/icon-foreground.png")
+          mipmap_sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
 
-          bg = Image.new("RGBA", (1024, 1024), (20, 20, 22, 255))
-          bg.save("assets/icon-background.png")
+          for folder, size in mipmap_sizes.items():
+              target_dir = os.path.join(res_dir, folder)
+              if not os.path.isdir(target_dir):
+                  continue
+              resized = icon_square.resize((size, size), Image.Resampling.LANCZOS)
+              resized.save(os.path.join(target_dir, "ic_launcher.png"))
+              resized.save(os.path.join(target_dir, "ic_launcher_round.png"))
 
-          splash = Image.new("RGBA", (2732, 2732), (20, 20, 22, 255))
-          splash_icon = cropped.resize((840, 840), Image.Resampling.LANCZOS)
-          offset = (2732 - 840) // 2
-          splash.paste(splash_icon, (offset, offset), splash_icon)
-          splash.save("assets/splash.png")
+              fg_size = int(size * 2.25)
+              fg_canvas = Image.new("RGBA", (fg_size, fg_size), (0, 0, 0, 0))
+              inner = int(fg_size * 0.68)
+              fg_icon = icon_square.resize((inner, inner), Image.Resampling.LANCZOS)
+              offset = (fg_size - inner) // 2
+              fg_canvas.paste(fg_icon, (offset, offset), fg_icon)
+              fg_canvas.save(os.path.join(target_dir, "ic_launcher_foreground.png"))
+
+          for splash_path in glob.glob(os.path.join(res_dir, "drawable*", "splash.png")):
+              with Image.open(splash_path) as existing:
+                  sw, sh = existing.size
+              splash = Image.new("RGBA", (sw, sh), (20, 20, 22, 255))
+              icon_dim = max(120, int(min(sw, sh) * 0.38))
+              splash_icon = icon_square.resize((icon_dim, icon_dim), Image.Resampling.LANCZOS)
+              splash.paste(splash_icon, ((sw - icon_dim) // 2, (sh - icon_dim) // 2), splash_icon)
+              splash.save(splash_path)
+
+          bg_xml = os.path.join(res_dir, "values", "ic_launcher_background.xml")
+          if os.path.exists(bg_xml):
+              with open(bg_xml, "w", encoding="utf-8") as f:
+                  f.write('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#141416</color>\n</resources>\n')
           EOF
-          ./node_modules/.bin/capacitor-assets generate --android --iconBackgroundColor '#141416' --splashBackgroundColor '#141416'
 
       - name: Build Android APK
         run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --no-daemon
           cp app/build/outputs/apk/debug/app-debug.apk ../loveTxt.apk
 
       - name: Determine release tag
