@@ -1,0 +1,8 @@
+{
+  "appId": "com.lovetxt.editor",
+  "appName": "loveTxt",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#141416"
+  }
+}

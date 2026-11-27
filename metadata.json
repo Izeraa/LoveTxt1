@@ -1,0 +1,6 @@
+{
+  "name": "loveTxt",
+  "description": "Editor de arquivos .txt minimalista, rápido e focado na escrita.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
