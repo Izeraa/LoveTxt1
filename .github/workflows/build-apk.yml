@@ -48,15 +48,15 @@ jobs:
             SDKMANAGER="$SDK_DIR/cmdline-tools/latest/bin/sdkmanager"
           fi
           yes | "$SDKMANAGER" --sdk_root="$SDK_DIR" --licenses > /dev/null 2>&1 || true
-          "$SDKMANAGER" --sdk_root="$SDK_DIR" "platforms;android-34" "build-tools;34.0.0"
+          yes | "$SDKMANAGER" --sdk_root="$SDK_DIR" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Install Capacitor & sync Android project
         run: |
           npm install --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
           if [ ! -d "android" ]; then
-            npx cap add android
+            ./node_modules/.bin/cap add android
           fi
-          npx cap sync android
+          ./node_modules/.bin/cap sync android
 
       - name: Apply loveTxt app icon and splash screen
         run: |
@@ -66,8 +66,16 @@ jobs:
           import os
           from PIL import Image
 
-          src_path = "public/assets/aistudio/_cone_Neon_LoveTxt_a4c65811.png"
+          candidates = [
+              "public/lovetxt-icon.png",
+              "public/assets/aistudio/_cone_Neon_LoveTxt_a4c65811.png",
+          ]
+          src_path = next((p for p in candidates if os.path.exists(p)), None)
           res_dir = "android/app/src/main/res"
+
+          if not src_path:
+              print("Icon source not found, keeping default Android icon.")
+              raise SystemExit(0)
 
           img = Image.open(src_path).convert("RGBA")
           w, h = img.size

@@ -8,7 +8,7 @@
   "theme_color": "#E11D48",
   "icons": [
     {
-      "src": "/assets/aistudio/_cone_Neon_LoveTxt_a4c65811.png",
+      "src": "/lovetxt-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"

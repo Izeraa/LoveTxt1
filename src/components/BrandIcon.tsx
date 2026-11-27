@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FileText } from 'lucide-react';
 
-export const LOVETXT_ICON_SRC = '/assets/aistudio/_cone_Neon_LoveTxt_a4c65811.png';
+export const LOVETXT_ICON_SRC = '/lovetxt-icon.png';
 
 interface BrandIconProps {
   size?: 'xs' | 'sm' | 'md' | 'lg';
