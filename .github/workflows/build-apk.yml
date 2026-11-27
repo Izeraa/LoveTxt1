@@ -24,11 +24,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: "22"
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm install --legacy-peer-deps
 
       - name: Build web app
         run: npm run build
@@ -43,7 +42,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Install Capacitor & Assets CLI
-        run: npm install --no-save @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/assets@3
+        run: npm install --no-save --legacy-peer-deps @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/assets@3
 
       - name: Add and sync Android platform
         run: |
@@ -54,7 +53,7 @@ jobs:
 
       - name: Generate Android app icon and splash from loveTxt image
         run: |
-          python3 -m pip install --break-system-packages pillow || pip install pillow
+          python3 -c "import PIL" 2>/dev/null || (sudo apt-get update && sudo apt-get install -y python3-pil)
           python3 - << 'EOF'
           import os
           from PIL import Image
@@ -82,7 +81,7 @@ jobs:
           splash.paste(splash_icon, (offset, offset), splash_icon)
           splash.save("assets/splash.png")
           EOF
-          npx capacitor-assets generate --android --iconBackgroundColor '#141416' --splashBackgroundColor '#141416'
+          ./node_modules/.bin/capacitor-assets generate --android --iconBackgroundColor '#141416' --splashBackgroundColor '#141416'
 
       - name: Build Android APK
         run: |
